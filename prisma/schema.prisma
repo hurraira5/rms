@@ -1,24 +1,80 @@
+// 1. Generator Setup
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
+  previewFeatures = ["driverAdapters"]
 }
 
+// 2. Datasource Setup (Prisma 7 style)
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
 }
 
+// 3. Restaurant Model (Master Account)
 model Restaurant {
-  id           String   @id @default(cuid())
-  name         String
-  slug         String   @unique 
-  trialEnds    DateTime
-  status       String   @default("Active")
-  branches     Branch[]
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique // e.g., fuse
+  email     String   @unique
+  password  String
+  status    String   @default("Active")
+  branches  Branch[]
+  createdAt DateTime @default(now())
 }
 
+// 4. Branch Model (Branch-specific logic)
 model Branch {
+  id           String     @id @default(cuid())
+  name         String     // e.g., Bahadurabad
+  restaurantId String
+  restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  deliveryArea String?
+  deliveryFee  Float      @default(0)
+  taxRate      Float      @default(0)
+  categories   Category[]
+  manager      Manager?
+}
+
+// 5. Manager Account for Branch
+model Manager {
+  id       String @id @default(cuid())
+  username String @unique
+  email    String @unique
+  password String
+  branchId String @unique
+  branch   Branch @relation(fields: [branchId], references: [id], onDelete: Cascade)
+}
+
+// 6. Menu Categories & Items
+model Category {
+  id       String @id @default(cuid())
+  name     String
+  branchId String
+  branch   Branch @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  items    Item[]
+}
+
+model Item {
+  id         String   @id @default(cuid())
+  name       String
+  price      Float
+  categoryId String
+  category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+}
+
+// 7. Order Model (Real-time Tracking preserved from previous version)
+model Order {
   id            String   @id @default(cuid())
-  name          String
+  orderNo       String   @unique // e.g., y4jWtx
   restaurantId  String
-  restaurant    Restaurant @relation(fields: [restaurantId], references: [id])
+  customerName  String   // e.g., Hurraira
+  phone         String   // e.g., 0313-3553345
+  address       String   // e.g., Bath Island
+  items         Json     // Order details array
+  subTotal      Float    // Rs. 804
+  deliveryFee   Float    // Rs. 150
+  discount      Float    // Rs. 105
+  grandTotal    Float    // Rs. 849
+  status        String   @default("Received") // Received/Accepted/Delivered
+  paymentMethod String   // COD or Bank
+  createdAt     DateTime @default(now())
 }
